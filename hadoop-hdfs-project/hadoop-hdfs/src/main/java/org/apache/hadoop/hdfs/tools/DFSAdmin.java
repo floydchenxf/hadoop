@@ -81,6 +81,7 @@ import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolClientSideTranslatorPB;
 import org.apache.hadoop.ipc.protocolPB.GenericRefreshProtocolPB;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.RefreshCheckUserPasswordProtocol;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -1837,6 +1838,8 @@ public class DFSAdmin extends FsShell {
         exitCode = reconfig(argv, i);
       } else if ("-triggerBlockReport".equals(cmd)) {
         exitCode = triggerBlockReport(argv);
+      } else if ("-refreshCheckUserPassword".equals(cmd)) {
+        exitCode = refreshCheckUserPassword();
       } else if ("-help".equals(cmd)) {
         if (i < argv.length) {
           printHelp(argv[i]);
@@ -1879,6 +1882,38 @@ public class DFSAdmin extends FsShell {
       LOG.debug("Exception encountered:", debugException);
     }
     return exitCode;
+  }
+
+  private int refreshCheckUserPassword() throws IOException {
+    Configuration conf = getConf();
+    conf.set(CommonConfigurationKeys.HADOOP_SECURITY_SERVICE_USER_NAME_KEY,
+            conf.get(DFSConfigKeys.DFS_NAMENODE_KERBEROS_PRINCIPAL_KEY, ""));
+    DistributedFileSystem dfs = getDFS();
+    URI dfsUri = dfs.getUri();
+    boolean isHaEnabled = HAUtil.isLogicalUri(conf, dfsUri);
+    if (isHaEnabled) {
+      String nsId = dfsUri.getHost();
+      List<ProxyAndInfo<RefreshCheckUserPasswordProtocol>> proxies =
+              HAUtil.getProxiesForAllNameNodesInNameservice(conf, nsId,
+                      RefreshCheckUserPasswordProtocol.class);
+      for (ProxyAndInfo<RefreshCheckUserPasswordProtocol> proxy : proxies) {
+        try {
+          proxy.getProxy().refreshCheckUserPassword();
+          System.out.println("Refresh checkuser password successful for "
+                  + proxy.getAddress());
+        } catch (Exception e) {
+          System.err.println("error refresh checkuser password for " + proxy.getAddress());
+          System.err.println(e.getMessage());
+        }
+      }
+    } else {
+      RefreshCheckUserPasswordProtocol refreshProtocol =
+              NameNodeProxies.createProxy(conf, FileSystem.getDefaultUri(conf),
+                      RefreshCheckUserPasswordProtocol.class).getProxy();
+      refreshProtocol.refreshCheckUserPassword();
+      System.out.println("Refresh checkuser password successful");
+    }
+    return 0;
   }
 
   private ClientDatanodeProtocol getDataNodeProxy(String datanode)

@@ -1,0 +1,15 @@
+option java_package = "org.apache.hadoop.security.proto";
+option java_outer_classname = "RefreshCheckUserPasswordProtocolProtos";
+option java_generic_services = true;
+option java_generate_equals_and_hash = true;
+package hadoop.common;
+message RefreshCheckUserPasswordRequestProto{
+}
+
+message RefreshCheckUserPasswordResponseProto {
+}
+
+service RefreshCheckUserPasswordProtocolService {
+    rpc refreshCheckUserPassword(RefreshCheckUserPasswordRequestProto)
+    returns(RefreshCheckUserPasswordResponseProto);
+}

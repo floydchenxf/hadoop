@@ -68,14 +68,12 @@ import org.apache.hadoop.io.retry.RetryUtils;
 import org.apache.hadoop.ipc.ProtobufRpcEngine;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.net.NetUtils;
+import org.apache.hadoop.security.RefreshCheckUserPasswordProtocol;
 import org.apache.hadoop.security.RefreshUserMappingsProtocol;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
-import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolClientSideTranslatorPB;
-import org.apache.hadoop.security.protocolPB.RefreshAuthorizationPolicyProtocolPB;
-import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolClientSideTranslatorPB;
-import org.apache.hadoop.security.protocolPB.RefreshUserMappingsProtocolPB;
+import org.apache.hadoop.security.protocolPB.*;
 import org.apache.hadoop.ipc.RefreshCallQueueProtocol;
 import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolPB;
 import org.apache.hadoop.ipc.protocolPB.RefreshCallQueueProtocolClientSideTranslatorPB;
@@ -327,6 +325,8 @@ public class NameNodeProxies {
           conf, ugi);
     } else if (xface == RefreshCallQueueProtocol.class) {
       proxy = (T) createNNProxyWithRefreshCallQueueProtocol(nnAddr, conf, ugi);
+    } else if (xface == RefreshCheckUserPasswordProtocol.class) {
+      proxy = (T) createNNProxyWithRefreshCheckUserPasswordProtocol(nnAddr, conf, ugi);
     } else {
       String message = "Unsupported protocol found when creating the proxy " +
           "connection to NameNode: " +
@@ -360,6 +360,14 @@ public class NameNodeProxies {
     RefreshUserMappingsProtocolPB proxy = (RefreshUserMappingsProtocolPB)
         createNameNodeProxy(address, conf, ugi, RefreshUserMappingsProtocolPB.class);
     return new RefreshUserMappingsProtocolClientSideTranslatorPB(proxy);
+  }
+
+  private static RefreshCheckUserPasswordProtocol
+  createNNProxyWithRefreshCheckUserPasswordProtocol(InetSocketAddress address,
+                                                    Configuration conf, UserGroupInformation ugi) throws IOException {
+    RefreshCheckUserPasswordProtocolPB proxy = (RefreshCheckUserPasswordProtocolPB)
+            createNameNodeProxy(address, conf, ugi, RefreshCheckUserPasswordProtocolPB.class);
+    return new RefreshCheckUserPasswordProtocolClientSideTranslatorPB(proxy);
   }
 
   private static RefreshCallQueueProtocol
