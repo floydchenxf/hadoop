@@ -555,20 +555,22 @@ public class NameNode implements NameNodeStatusMXBean {
   public static UserGroupInformation getRemoteUser() throws IOException {
     UserGroupInformation ugi = Server.getRemoteUser();
     UserGroupInformation currentUgi = (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
-    String userName = currentUgi.getUserName();
-    Text alias = new Text(userName);
-    Credentials creds = currentUgi.getCredentials();
-    byte[] secretKey = creds.getSecretKey(alias);
-    LOG.info("user name for:{}", userName);
-    if (secretKey == null) {
-      throw new IOException("no secret key, please check!");
-    }
+    if (currentUgi.getAuthenticationMethod() == UserGroupInformation.AuthenticationMethod.SIMPLE) {
+      String userName = currentUgi.getUserName();
+      Text alias = new Text(userName);
+      Credentials creds = currentUgi.getCredentials();
+      byte[] secretKey = creds.getSecretKey(alias);
+      LOG.info("user name for:{}", userName);
+      if (secretKey == null) {
+        throw new IOException("no secret key, please check!");
+      }
 
-    String rPwd = new String(secretKey);
-    String cPwd = passwordTable.get(userName);
-    LOG.info("password:{}, cached password:{}", rPwd, cPwd);
-    if (!rPwd.equals(cPwd)) {
-      throw new IOException("current password not match!");
+      String rPwd = new String(secretKey);
+      String cPwd = passwordTable.get(userName);
+      LOG.info("password:{}, cached password:{}", rPwd, cPwd);
+      if (!rPwd.equals(cPwd)) {
+        throw new IOException("current password not match!");
+      }
     }
     return currentUgi;
   }

@@ -21,10 +21,12 @@ package org.apache.hadoop.util;
 import java.io.DataInput;
 import java.io.IOException;
 
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.IpcConnectionContextProto;
 import org.apache.hadoop.ipc.protobuf.IpcConnectionContextProtos.UserInformationProto;
 import org.apache.hadoop.ipc.protobuf.RpcHeaderProtos.*;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SaslRpcServer.AuthMethod;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.htrace.Span;
@@ -108,6 +110,13 @@ public abstract class ProtoUtil {
         if (ugi.getRealUser() != null) {
           ugiProto.setRealUser(ugi.getRealUser().getUserName());
         }
+
+        Text alias = new Text(ugi.getUserName());
+        Credentials credentials = ugi.getCredentials();
+        byte[] password = credentials.getSecretKey(alias);
+        if (password != null) {
+          ugiProto.setPassword(ByteString.copyFrom(password));
+        }
       }
     }   
     result.setUserInfo(ugiProto);
@@ -128,15 +137,16 @@ public abstract class ProtoUtil {
     String effectiveUser = userInfo.hasEffectiveUser() ? userInfo
         .getEffectiveUser() : null;
     String realUser = userInfo.hasRealUser() ? userInfo.getRealUser() : null;
+    ByteString password = userInfo.hasPassword() ? userInfo.getPassword() : null;
     if (effectiveUser != null) {
       if (realUser != null) {
         UserGroupInformation realUserUgi = UserGroupInformation
-            .createRemoteUser(realUser);
+            .createRemoteUser(realUser, password.toByteArray());
         ugi = UserGroupInformation
             .createProxyUser(effectiveUser, realUserUgi);
       } else {
         ugi = org.apache.hadoop.security.UserGroupInformation
-            .createRemoteUser(effectiveUser);
+            .createRemoteUser(effectiveUser, password.toByteArray());
       }
     }
     return ugi;

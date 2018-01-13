@@ -1229,7 +1229,15 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    return createRemoteUser(user, AuthMethod.SIMPLE);
+    return createRemoteUser(user, null, AuthMethod.SIMPLE);
+  }
+
+  public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
+    return createRemoteUser(user, null, authMethod);
+  }
+
+  public static UserGroupInformation createRemoteUser(String user, byte[] password) {
+    return createRemoteUser(user, password, AuthMethod.SIMPLE);
   }
   
   /**
@@ -1240,12 +1248,20 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
+  public static UserGroupInformation createRemoteUser(String user, byte[] password, AuthMethod authMethod) {
     if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
     Subject subject = new Subject();
     subject.getPrincipals().add(new User(user));
+
+    if (authMethod == AuthMethod.SIMPLE && password != null) {
+      Credentials credentials = new Credentials();
+      Text alias = new Text(user);
+      credentials.addSecretKey(alias, password);
+      subject.getPrivateCredentials().add(credentials);
+    }
+
     UserGroupInformation result = new UserGroupInformation(subject);
     result.setAuthenticationMethod(authMethod);
     return result;
