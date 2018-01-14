@@ -252,7 +252,9 @@ public class JspHelper {
     }
 
     if (ugi == null) { // security is off, or there's no token
-      ugi = UserGroupInformation.createRemoteUser(remoteUser);
+      String passwd = getPasswordFromQuery(request);
+      byte[] bytePasswd = passwd == null || passwd.trim().equals("") ? null : passwd.getBytes();
+      ugi = UserGroupInformation.createRemoteUser(remoteUser, bytePasswd);
       checkUsername(ugi.getShortUserName(), usernameFromQuery);
       if (UserGroupInformation.isSecurityEnabled()) {
         // This is not necessarily true, could have been auth'ed by user-facing
@@ -349,6 +351,11 @@ public class JspHelper {
       }
     }
     return username;
+  }
+
+  private static String getPasswordFromQuery(final  HttpServletRequest request) {
+    String password = request.getParameter(UserParam.PASSWORD);
+    return password;
   }
 
   /**

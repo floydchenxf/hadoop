@@ -28,6 +28,9 @@ import java.util.regex.Pattern;
 public class UserParam extends StringParam {
   /** Parameter name. */
   public static final String NAME = "user.name";
+
+  public static final String PASSWORD = "user.passwd";
+
   /** Default parameter value. */
   public static final String DEFAULT = "";
 

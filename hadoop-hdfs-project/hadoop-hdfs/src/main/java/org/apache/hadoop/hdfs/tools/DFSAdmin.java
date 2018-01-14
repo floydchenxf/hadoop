@@ -1619,7 +1619,10 @@ public class DFSAdmin extends FsShell {
           + " [-getDatanodeInfo <datanode_host:ipc_port>]");
     } else if ("-triggerBlockReport".equals(cmd)) {
       System.err.println("Usage: hdfs dfsadmin"
-          + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
+              + " [-triggerBlockReport [-incremental] <datanode_host:ipc_port>]");
+    } else if ("-refreshCheckUserPassword".equals(cmd)) {
+      System.err.println("Usage: hdfs dfsadmin"
+              + " [-refreshCheckUserPassword]");
     } else {
       System.err.println("Usage: hdfs dfsadmin");
       System.err.println("Note: Administrative commands can only be run as the HDFS superuser.");
@@ -1760,6 +1763,11 @@ public class DFSAdmin extends FsShell {
       }
     } else if ("-triggerBlockReport".equals(cmd)) {
       if (argv.length < 1) {
+        printUsage(cmd);
+        return exitCode;
+      }
+    } else if ("-refreshCheckUserPassword".equals(cmd)) {
+      if (argv.length != 1) {
         printUsage(cmd);
         return exitCode;
       }
