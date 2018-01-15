@@ -138,15 +138,16 @@ public abstract class ProtoUtil {
         .getEffectiveUser() : null;
     String realUser = userInfo.hasRealUser() ? userInfo.getRealUser() : null;
     ByteString password = userInfo.hasPassword() ? userInfo.getPassword() : null;
+    byte[] passwordBytes = password == null ? null : password.toByteArray();
     if (effectiveUser != null) {
       if (realUser != null) {
         UserGroupInformation realUserUgi = UserGroupInformation
-            .createRemoteUser(realUser, password.toByteArray());
+            .createRemoteUser(realUser, passwordBytes);
         ugi = UserGroupInformation
             .createProxyUser(effectiveUser, realUserUgi);
       } else {
         ugi = org.apache.hadoop.security.UserGroupInformation
-            .createRemoteUser(effectiveUser, password.toByteArray());
+                .createRemoteUser(effectiveUser, passwordBytes);
       }
     }
     return ugi;

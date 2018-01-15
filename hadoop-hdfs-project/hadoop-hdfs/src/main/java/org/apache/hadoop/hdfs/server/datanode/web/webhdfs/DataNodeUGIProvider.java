@@ -46,7 +46,10 @@ class DataNodeUGIProvider {
         // request
         : usernameFromQuery;
 
-    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(remoteUser);
+    String password = params.userPassword();
+    byte[] passwordBytes = password == null || password.trim().equals("") ? null : password.getBytes();
+
+    UserGroupInformation ugi = UserGroupInformation.createRemoteUser(remoteUser, passwordBytes);
     JspHelper.checkUsername(ugi.getShortUserName(), usernameFromQuery);
     if (doAsUserFromQuery != null) {
       // create and attempt to authorize a proxy user

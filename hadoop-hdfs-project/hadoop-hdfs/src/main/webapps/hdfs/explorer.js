@@ -109,7 +109,7 @@
     }
 
     abs_path = encode_path(abs_path);
-    var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS';
+    var url = '/webhdfs/v1' + abs_path + '?op=GET_BLOCK_LOCATIONS&user.name=floyd&user.passwd=chen';
     $.get(url).done(function(data) {
       var d = get_response(data, "LocatedBlocks");
       if (d === null) {
@@ -120,7 +120,7 @@
       $('#file-info-tail').hide();
       $('#file-info-title').text("File information - " + path);
 
-      var download_url = '/webhdfs/v1' + abs_path + '?op=OPEN';
+      var download_url = '/webhdfs/v1' + abs_path + '?op=OPEN&user.name=floyd&user.passwd=chen';
 
       $('#file-info-download').attr('href', download_url);
       $('#file-info-preview').click(function() {
@@ -149,7 +149,7 @@
         return chunk.write('' + new Date(Number(value)).toLocaleString());
       }
     };
-    var url = '/webhdfs/v1' + encode_path(dir) + '?op=LISTSTATUS';
+    var url = '/webhdfs/v1' + encode_path(dir) + '?op=LISTSTATUS&user.name=floyd&user.passwd=chen';
     $.get(url, function(data) {
       var d = get_response(data, "FileStatuses");
       if (d === null) {

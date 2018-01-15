@@ -47,6 +47,7 @@ import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeHttpServer;
 import org.apache.hadoop.hdfs.web.resources.DelegationParam;
 import org.apache.hadoop.hdfs.web.resources.DoAsParam;
+import org.apache.hadoop.hdfs.web.resources.PasswordParam;
 import org.apache.hadoop.hdfs.web.resources.UserParam;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
@@ -354,7 +355,7 @@ public class JspHelper {
   }
 
   private static String getPasswordFromQuery(final  HttpServletRequest request) {
-    String password = request.getParameter(UserParam.PASSWORD);
+    String password = request.getParameter(PasswordParam.PASSWORD);
     return password;
   }
 

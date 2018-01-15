@@ -266,10 +266,23 @@ public class NamenodeWebHdfsMethods {
       throw new IOException("Failed to find datanode, suggest to check cluster health.", ite);
     }
 
-    final String delegationQuery;
+    String delegationQuery;
     if (!UserGroupInformation.isSecurityEnabled()) {
-      //security disabled
-      delegationQuery = Param.toSortedString("&", doAsUser, username);
+      //security disable
+        PasswordParam passwordParam = null;
+      if (ugi.getAuthenticationMethod() == UserGroupInformation.AuthenticationMethod.SIMPLE) {
+          Credentials credentials = ugi.getCredentials();
+          Text alias =  new Text(username.getValueString());
+          if (credentials != null && credentials.getSecretKey(alias) != null) {
+              passwordParam = new PasswordParam(new String(credentials.getSecretKey(alias)));
+          }
+      }
+
+      if (passwordParam != null) {
+          delegationQuery = Param.toSortedString("&", doAsUser, username, passwordParam);
+      } else {
+          delegationQuery = Param.toSortedString("&", doAsUser, username);
+      }
     } else if (delegation.getValue() != null) {
       //client has provided a token
       delegationQuery = "&" + delegation;
