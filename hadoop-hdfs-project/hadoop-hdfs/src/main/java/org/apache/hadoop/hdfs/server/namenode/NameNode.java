@@ -42,6 +42,8 @@ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.RollingUpgradeSt
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 import org.apache.hadoop.hdfs.server.namenode.ha.*;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+import org.apache.hadoop.hdfs.server.namenode.passwdspi.PasswordFetcher;
+import org.apache.hadoop.hdfs.server.namenode.passwdspi.UserInfo;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgress;
 import org.apache.hadoop.hdfs.server.namenode.startupprogress.StartupProgressMetrics;
 import org.apache.hadoop.hdfs.server.protocol.*;
@@ -555,22 +557,24 @@ public class NameNode implements NameNodeStatusMXBean {
   public static UserGroupInformation getRemoteUser() throws IOException {
     UserGroupInformation ugi = Server.getRemoteUser();
     UserGroupInformation currentUgi = (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
-    if (currentUgi.getAuthenticationMethod() == UserGroupInformation.AuthenticationMethod.SIMPLE) {
-      String userName = currentUgi.getUserName();
-      Text alias = new Text(userName);
-      Credentials creds = currentUgi.getCredentials();
-      byte[] secretKey = creds.getSecretKey(alias);
-      LOG.info("user name for:{}", userName);
-      if (secretKey == null) {
-        throw new IOException("no secret key, please check!");
-      }
+    if (passwordTable == null || passwordTable.isEmpty() || currentUgi.getAuthenticationMethod() != UserGroupInformation.AuthenticationMethod.SIMPLE) {
+      return currentUgi;
+    }
 
-      String rPwd = new String(secretKey);
-      String cPwd = passwordTable.get(userName);
-      LOG.info("password:{}, cached password:{}", rPwd, cPwd);
-      if (!rPwd.equals(cPwd)) {
-        throw new IOException("current password not match!");
-      }
+    String userName = currentUgi.getUserName();
+    Text alias = new Text(userName);
+    Credentials creds = currentUgi.getCredentials();
+    byte[] secretKey = creds.getSecretKey(alias);
+    LOG.info("user name for:{}", userName);
+    if (secretKey == null) {
+      throw new IOException("no secret key, please check!");
+    }
+
+    String rPwd = new String(secretKey);
+    String cPwd = passwordTable.get(userName);
+    LOG.info("password:{}, cached password:{}", rPwd, cPwd);
+    if (!rPwd.equals(cPwd)) {
+      throw new IOException("current password not match!");
     }
     return currentUgi;
   }
@@ -635,17 +639,32 @@ public class NameNode implements NameNodeStatusMXBean {
     startCommonServices(conf);
 
     LOG.info("---------init password table----------");
-    //FIXME load user password table, now hardcord
-    passwordTable.clear();
-    passwordTable.put("floyd","chen");
+    refreshCheckUserPassword();
   }
 
   public void refreshCheckUserPassword() {
-    LOG.info("--------refreshCheckUserPassword--------");
-    passwordTable.clear();
-    passwordTable.put("floyd","chen");
-    passwordTable.put("floyd1","chen");
-    passwordTable.put("floyd2","chen");
+    LOG.info("--------begin refreshCheckUserPassword--------");
+    ServiceLoader<PasswordFetcher> services = ServiceLoader.load(PasswordFetcher.class);
+    if (services != null) {
+      passwordTable.clear();
+      Iterator<PasswordFetcher> fetcherIterators = services.iterator();
+      while (fetcherIterators.hasNext()) {
+        PasswordFetcher fetcher = fetcherIterators.next();
+        List<UserInfo> userInfos = fetcher.fetchUserInfo();
+        if (userInfos == null || userInfos.isEmpty()) {
+          continue;
+        }
+
+        for (UserInfo info : userInfos) {
+          String userName = info.getUserName();
+          String password = info.getPassword();
+          passwordTable.put(userName, password);
+          LOG.info("--------userName:" + userName + "---password:" + password + "----");
+        }
+      }
+    }
+
+    LOG.info("--------end refreshCheckUserPassword--------");
   }
   
   /**

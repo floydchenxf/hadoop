@@ -20,8 +20,10 @@ package org.apache.hadoop.security;
 import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.util.PlatformName.IBM_JAVA;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.security.AccessControlContext;
 import java.security.AccessController;
@@ -137,7 +139,9 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Private
   public static class HadoopLoginModule implements LoginModule {
+    public static final String HDFS_PWD = "/.hdfs_pwd";
     private Subject subject;
+
 
     @Override
     public boolean abort() throws LoginException {
@@ -203,15 +207,63 @@ public class UserGroupInformation {
           LOG.debug("User entry: \"" + userEntry.toString() + "\"" );
         }
 
-        subject.getPrincipals().add(userEntry);
-        Credentials credentials = new Credentials();
-        Text alias = new Text(user.getName());
-        credentials.addSecretKey(alias, "chen".getBytes());
-        subject.getPrivateCredentials().add(credentials);
+        String password = getPassword();
+        if (password != null && !password.trim().equals("")) {
+          subject.getPrincipals().add(userEntry);
+          Credentials credentials = new Credentials();
+          Text alias = new Text(user.getName());
+          credentials.addSecretKey(alias, "chen".getBytes());
+          subject.getPrivateCredentials().add(credentials);
+        }
+
         return true;
       }
       LOG.error("Can't find user in " + subject);
       throw new LoginException("Can't find user name");
+    }
+
+
+    private String getPassword() {
+      LOG.info("---begin to get password---");
+      InputStream is = null;
+      ByteArrayOutputStream baos = null;
+      String result = null;
+      try {
+        is = this.getClass().getResourceAsStream(HDFS_PWD);
+        if (is == null) {
+          LOG.info("---inputStream is null---");
+          return null;
+        }
+
+        byte[] block = new byte[2048];
+        int num = 0;
+        baos = new ByteArrayOutputStream();
+        while ((num = is.read(block)) != -1) {
+          baos.write(block, 0, num);
+        }
+
+        result = new String(baos.toByteArray());
+        LOG.info("---get password for:" + result + "---");
+      } catch (Exception e) {
+        LOG.error("getPassword cause error:" + e.getMessage());
+      } finally {
+        if (is != null) {
+          try {
+            is.close();
+          } catch (IOException e) {
+          }
+        }
+
+        if (baos != null) {
+          try {
+            baos.close();
+          } catch (IOException e) {
+          }
+        }
+      }
+
+      LOG.info("---end to get password---");
+      return result;
     }
 
     @Override
