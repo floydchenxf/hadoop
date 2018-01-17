@@ -212,7 +212,7 @@ public class UserGroupInformation {
           subject.getPrincipals().add(userEntry);
           Credentials credentials = new Credentials();
           Text alias = new Text(user.getName());
-          credentials.addSecretKey(alias, "chen".getBytes());
+          credentials.addSecretKey(alias, password.getBytes());
           subject.getPrivateCredentials().add(credentials);
         }
 
