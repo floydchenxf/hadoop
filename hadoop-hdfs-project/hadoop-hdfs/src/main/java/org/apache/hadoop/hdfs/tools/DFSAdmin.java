@@ -942,6 +942,8 @@ public class DFSAdmin extends FsShell {
 
     String refreshServiceAcl = "-refreshServiceAcl: Reload the service-level authorization policy file\n" +
       "\t\tNamenode will reload the authorization policy file.\n";
+
+    String refreshCheckUserPassword = "-refreshCheckUserPassword: Reload the authorization user password.\n";
     
     String refreshUserToGroupsMappings = 
       "-refreshUserToGroupsMappings: Refresh user-to-groups mappings\n";
@@ -1105,6 +1107,7 @@ public class DFSAdmin extends FsShell {
       System.out.println(shutdownDatanode);
       System.out.println(getDatanodeInfo);
       System.out.println(triggerBlockReport);
+      System.out.println(refreshCheckUserPassword);
       System.out.println(help);
       System.out.println();
       ToolRunner.printGenericCommandUsage(System.out);
