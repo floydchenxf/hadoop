@@ -207,7 +207,7 @@ public class UserGroupInformation {
           LOG.debug("User entry: \"" + userEntry.toString() + "\"" );
         }
 
-        String password = getPassword();
+        String password = getPassword(user.getName());
         if (password != null && !password.trim().equals("")) {
           subject.getPrincipals().add(userEntry);
           Credentials credentials = new Credentials();
@@ -223,15 +223,15 @@ public class UserGroupInformation {
     }
 
 
-    private String getPassword() {
-      LOG.info("---begin to get password---");
+    private String getPassword(String user) {
+      LOG.debug("---begin to get password---");
       InputStream is = null;
       ByteArrayOutputStream baos = null;
       String result = null;
       try {
         is = this.getClass().getResourceAsStream(HDFS_PWD);
         if (is == null) {
-          LOG.info("---inputStream is null---");
+          LOG.debug("---inputStream is null---");
           return null;
         }
 
@@ -243,7 +243,7 @@ public class UserGroupInformation {
         }
 
         result = new String(baos.toByteArray());
-        LOG.info("---get password for:" + result + "---");
+        LOG.debug("---get password success for:" + user + "---");
       } catch (Exception e) {
         LOG.error("getPassword cause error:" + e.getMessage());
       } finally {

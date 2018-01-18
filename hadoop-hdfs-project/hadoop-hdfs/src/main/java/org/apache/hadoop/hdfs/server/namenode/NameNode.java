@@ -645,6 +645,7 @@ public class NameNode implements NameNodeStatusMXBean {
   public void refreshCheckUserPassword() {
     LOG.info("--------begin refreshCheckUserPassword--------");
     ServiceLoader<PasswordFetcher> services = ServiceLoader.load(PasswordFetcher.class);
+    int num = 0;
     if (services != null) {
       passwordTable.clear();
       Iterator<PasswordFetcher> fetcherIterators = services.iterator();
@@ -659,12 +660,12 @@ public class NameNode implements NameNodeStatusMXBean {
           String userName = info.getUserName();
           String password = info.getPassword();
           passwordTable.put(userName, password);
-          LOG.info("--------userName:" + userName + "---password:" + password + "----");
+          num++;
         }
       }
     }
 
-    LOG.info("--------end refreshCheckUserPassword--------");
+    LOG.info("--------end refreshCheckUserPassword for load num:" + num + "--------");
   }
   
   /**
