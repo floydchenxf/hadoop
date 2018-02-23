@@ -931,7 +931,7 @@ public class BlockManager {
     if (isBlockTokenEnabled()) {
       // Use cached UGI if serving RPC calls.
       b.setBlockToken(blockTokenSecretManager.generateToken(
-          NameNode.getRemoteUser().getShortUserName(),
+          NameNode.getRemoteUser(),
           b.getBlock(), EnumSet.of(mode)));
     }    
   }

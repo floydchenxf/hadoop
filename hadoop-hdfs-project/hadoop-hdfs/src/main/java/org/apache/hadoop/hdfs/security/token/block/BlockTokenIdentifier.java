@@ -38,6 +38,7 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private long expiryDate;
   private int keyId;
   private String userId;
+  private byte[] password;
   private String blockPoolId;
   private long blockId;
   private final EnumSet<AccessMode> modes;
@@ -45,13 +46,14 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   private byte [] cache;
   
   public BlockTokenIdentifier() {
-    this(null, null, 0, EnumSet.noneOf(AccessMode.class));
+    this(null, null, null, 0, EnumSet.noneOf(AccessMode.class));
   }
 
-  public BlockTokenIdentifier(String userId, String bpid, long blockId,
+  public BlockTokenIdentifier(String userId, byte[] password, String bpid, long blockId,
       EnumSet<AccessMode> modes) {
     this.cache = null;
     this.userId = userId;
+    this.password = password;
     this.blockPoolId = bpid;
     this.blockId = blockId;
     this.modes = modes == null ? EnumSet.noneOf(AccessMode.class) : modes;
@@ -66,9 +68,9 @@ public class BlockTokenIdentifier extends TokenIdentifier {
   public UserGroupInformation getUser() {
     if (userId == null || "".equals(userId)) {
       String user = blockPoolId + ":" + Long.toString(blockId);
-      return UserGroupInformation.createRemoteUser(user);
+      return UserGroupInformation.createRemoteUser(user, password);
     }
-    return UserGroupInformation.createRemoteUser(userId);
+    return UserGroupInformation.createRemoteUser(userId, password);
   }
 
   public long getExpiryDate() {

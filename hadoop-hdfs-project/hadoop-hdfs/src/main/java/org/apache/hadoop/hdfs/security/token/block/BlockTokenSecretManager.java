@@ -33,7 +33,9 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.datatransfer.InvalidEncryptionKeyException;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
@@ -241,16 +243,23 @@ public class BlockTokenSecretManager extends
   public Token<BlockTokenIdentifier> generateToken(ExtendedBlock block,
       EnumSet<AccessMode> modes) throws IOException {
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
-    String userID = (ugi == null ? null : ugi.getShortUserName());
-    return generateToken(userID, block, modes);
+    return generateToken(ugi, block, modes);
   }
 
-  /** Generate a block token for a specified user */
-  public Token<BlockTokenIdentifier> generateToken(String userId,
-      ExtendedBlock block, EnumSet<AccessMode> modes) throws IOException {
-    BlockTokenIdentifier id = new BlockTokenIdentifier(userId, block
+  public Token<BlockTokenIdentifier> generateToken(UserGroupInformation ugi, ExtendedBlock block,
+                                                   EnumSet<AccessMode> modes) throws IOException {
+    String userID =  ugi.getShortUserName();
+    Text alias = new Text(userID);
+    Credentials creds = ugi.getCredentials();
+    byte[] secretKey = null;
+    if (creds != null) {
+      secretKey = creds.getSecretKey(alias);
+    }
+
+    BlockTokenIdentifier id = new BlockTokenIdentifier(userID, secretKey, block
         .getBlockPoolId(), block.getBlockId(), modes);
     return new Token<BlockTokenIdentifier>(id, this);
+
   }
 
   /**
