@@ -411,7 +411,7 @@ public class TestDefaultContainerExecutor {
     
     try {
       mockExec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
-          appSubmitter, appId, locId, dirsHandler);
+          appSubmitter, null, appId, locId, dirsHandler);
     } catch (IOException e) {
       Assert.fail("StartLocalizer failed to copy token file " + e);
     } finally {

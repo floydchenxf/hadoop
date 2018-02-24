@@ -91,6 +91,7 @@ public class UserGroupInformation {
   private static final float TICKET_RENEW_WINDOW = 0.80f;
   private static boolean shouldRenewImmediatelyForTests = false;
   static final String HADOOP_USER_NAME = "HADOOP_USER_NAME";
+  static final String HADOOP_USER_PASSWORD = "HADOOP_USER_PASSWORD";
   static final String HADOOP_PROXY_USER = "HADOOP_PROXY_USER";
 
   /**
@@ -141,7 +142,6 @@ public class UserGroupInformation {
   public static class HadoopLoginModule implements LoginModule {
     public static final String HDFS_PWD = "/.hdfs_pwd";
     private Subject subject;
-
 
     @Override
     public boolean abort() throws LoginException {
@@ -224,10 +224,15 @@ public class UserGroupInformation {
 
 
     private String getPassword(String user) {
-      LOG.debug("---begin to get password---");
+      LOG.info("---begin to get password---");
+      String result = System.getenv(HADOOP_USER_PASSWORD);
+      if (result != null && !result.trim().equals("")) {
+        LOG.debug("---get password success for:" + user + "---");
+        return result;
+      }
+
       InputStream is = null;
       ByteArrayOutputStream baos = null;
-      String result = null;
       try {
         is = this.getClass().getResourceAsStream(HDFS_PWD);
         if (is == null) {
@@ -394,6 +399,14 @@ public class UserGroupInformation {
     ensureInitialized();
     return (authenticationMethod == method);
   }
+
+  public boolean isNeedCheck() {
+    return this.needCheck;
+  }
+
+  public void setNeedCheck(boolean neeedCheck) {
+    this.needCheck = neeedCheck;
+  }
   
   /**
    * Information about the logged in user.
@@ -404,9 +417,10 @@ public class UserGroupInformation {
 
   private final Subject subject;
   // All non-static fields must be read-only caches that come from the subject.
-  private final User user;
+  private User user;
   private final boolean isKeytab;
   private final boolean isKrbTkt;
+  private boolean needCheck = true;
   
   private static String OS_LOGIN_MODULE_NAME;
   private static Class<? extends Principal> OS_PRINCIPAL_CLASS;
@@ -655,16 +669,27 @@ public class UserGroupInformation {
     user.setLogin(login);
   }
 
+  UserGroupInformation(Subject subject) {
+    this(subject, true);
+  }
+
   /**
    * Create a UserGroupInformation for the given subject.
    * This does not change the subject or acquire new credentials.
    * @param subject the user's subject
    */
-  UserGroupInformation(Subject subject) {
+  UserGroupInformation(Subject subject, boolean needCheck) {
     this.subject = subject;
-    this.user = subject.getPrincipals(User.class).iterator().next();
+    Set<User> users = subject.getPrincipals(User.class);
+    this.user = null;
+    if (users != null && !users.isEmpty() && users.iterator().hasNext()) {
+      this.user = users.iterator().next();
+    } else {
+      this.user = new User("");
+    }
     this.isKeytab = !subject.getPrivateCredentials(KeyTab.class).isEmpty();
     this.isKrbTkt = !subject.getPrivateCredentials(KerberosTicket.class).isEmpty();
+    this.needCheck = needCheck;
   }
   
   /**
@@ -1281,15 +1306,15 @@ public class UserGroupInformation {
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
   public static UserGroupInformation createRemoteUser(String user) {
-    return createRemoteUser(user, null, AuthMethod.SIMPLE);
+    return createRemoteUser(user, null, false, AuthMethod.SIMPLE);
   }
 
   public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
-    return createRemoteUser(user, null, authMethod);
+    return createRemoteUser(user, null, true, authMethod);
   }
 
   public static UserGroupInformation createRemoteUser(String user, byte[] password) {
-    return createRemoteUser(user, password, AuthMethod.SIMPLE);
+    return createRemoteUser(user, password, true, AuthMethod.SIMPLE);
   }
   
   /**
@@ -1300,7 +1325,7 @@ public class UserGroupInformation {
    */
   @InterfaceAudience.Public
   @InterfaceStability.Evolving
-  public static UserGroupInformation createRemoteUser(String user, byte[] password, AuthMethod authMethod) {
+  public static UserGroupInformation createRemoteUser(String user, byte[] password, boolean needCheck, AuthMethod authMethod) {
     if (user == null || user.isEmpty()) {
       throw new IllegalArgumentException("Null user");
     }
@@ -1314,7 +1339,7 @@ public class UserGroupInformation {
       subject.getPrivateCredentials().add(credentials);
     }
 
-    UserGroupInformation result = new UserGroupInformation(subject);
+    UserGroupInformation result = new UserGroupInformation(subject, needCheck);
     result.setAuthenticationMethod(authMethod);
     return result;
   }

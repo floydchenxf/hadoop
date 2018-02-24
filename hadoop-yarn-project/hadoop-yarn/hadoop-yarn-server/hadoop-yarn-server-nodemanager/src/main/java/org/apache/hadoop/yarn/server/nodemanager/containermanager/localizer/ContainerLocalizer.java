@@ -47,6 +47,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
@@ -87,6 +88,7 @@ public class ContainerLocalizer {
       new FsPermission((short)0710);
 
   private final String user;
+  private byte[] password;
   private final String appId;
   private final List<Path> localDirs;
   private final String localizerId;
@@ -97,6 +99,12 @@ public class ContainerLocalizer {
   private final String appCacheDirContextName;
 
   public ContainerLocalizer(FileContext lfs, String user, String appId,
+                            String localizerId, List<Path> localDirs,
+                            RecordFactory recordFactory) throws IOException {
+    this(lfs, user, null, appId, localizerId, localDirs, recordFactory);
+  }
+
+  public ContainerLocalizer(FileContext lfs, String user, byte[] password, String appId,
       String localizerId, List<Path> localDirs,
       RecordFactory recordFactory) throws IOException {
     if (null == user) {
@@ -107,6 +115,7 @@ public class ContainerLocalizer {
     }
     this.lfs = lfs;
     this.user = user;
+    this.password = password;
     this.appId = appId;
     this.localDirs = localDirs;
     this.localizerId = localizerId;
@@ -137,7 +146,7 @@ public class ContainerLocalizer {
       credFile = lfs.open(tokenPath);
       creds.readTokenStorageStream(credFile);
       // Explicitly deleting token file.
-      lfs.delete(tokenPath, false);      
+      lfs.delete(tokenPath, false);
     } finally  {
       if (credFile != null) {
         credFile.close();
@@ -145,7 +154,7 @@ public class ContainerLocalizer {
     }
     // create localizer context
     UserGroupInformation remoteUser =
-      UserGroupInformation.createRemoteUser(user);
+      UserGroupInformation.createRemoteUser(user, password);
     remoteUser.addToken(creds.getToken(LocalizerTokenIdentifier.KIND));
     final LocalizationProtocol nodeManager =
         remoteUser.doAs(new PrivilegedAction<LocalizationProtocol>() {
@@ -157,7 +166,7 @@ public class ContainerLocalizer {
 
     // create user context
     UserGroupInformation ugi =
-      UserGroupInformation.createRemoteUser(user);
+      UserGroupInformation.createRemoteUser(user, password);
     for (Token<? extends TokenIdentifier> token : creds.getAllTokens()) {
       ugi.addToken(token);
     }
@@ -269,7 +278,7 @@ public class ContainerLocalizer {
   /**
    * Create the payload for the HeartBeat. Mainly the list of
    * {@link LocalResourceStatus}es
-   * 
+   *
    * @return a {@link LocalizerStatus} that can be sent via heartbeat.
    * @throws InterruptedException
    */
@@ -312,7 +321,7 @@ public class ContainerLocalizer {
     status.addAllResources(currentResources);
     return status;
   }
-  
+
   /**
    * Adds the ContainerLocalizer arguments for a @{link ShellCommandExecutor},
    * as expected by ContainerLocalizer.main
@@ -326,7 +335,7 @@ public class ContainerLocalizer {
   public static void buildMainArgs(List<String> command,
       String user, String appId, String locId,
       InetSocketAddress nmAddr, List<String> localDirs) {
-    
+
     command.add(ContainerLocalizer.class.getName());
     command.add(user);
     command.add(appId);
@@ -358,15 +367,24 @@ public class ContainerLocalizer {
         localDirs.add(new Path(sLocaldir));
       }
 
-      final String uid =
-          UserGroupInformation.getCurrentUser().getShortUserName();
+      UserGroupInformation userInfo = UserGroupInformation.getCurrentUser();
+      final String uid = userInfo.getShortUserName();
+
+      byte[] secretKey = null;
+      Credentials creds = userInfo.getCredentials();
+      if (creds != null) {
+        Text alias = new Text(uid);
+        secretKey = creds.getSecretKey(alias);
+      }
+
+      final byte[] password = null;
       if (!user.equals(uid)) {
         // TODO: fail localization
         LOG.warn("Localization running as " + uid + " not " + user);
       }
 
       ContainerLocalizer localizer =
-          new ContainerLocalizer(FileContext.getLocalFSFileContext(), user,
+          new ContainerLocalizer(FileContext.getLocalFSFileContext(), user, password,
               appId, locId, localDirs,
               RecordFactoryProvider.getRecordFactory(null));
       int nRet = localizer.runLocalization(nmAddr);

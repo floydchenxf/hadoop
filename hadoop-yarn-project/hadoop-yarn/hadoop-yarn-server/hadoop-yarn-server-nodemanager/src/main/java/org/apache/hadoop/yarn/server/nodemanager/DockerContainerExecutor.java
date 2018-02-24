@@ -110,7 +110,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
 
   @Override
   public synchronized void startLocalizer(Path nmPrivateContainerTokensPath,
-                                          InetSocketAddress nmAddr, String user, String appId, String locId,
+                                          InetSocketAddress nmAddr, String user, byte[] password, String appId, String locId,
                                           LocalDirsHandlerService dirsHandler)
     throws IOException, InterruptedException {
 
@@ -118,7 +118,7 @@ public class DockerContainerExecutor extends ContainerExecutor {
     List<String> logDirs = dirsHandler.getLogDirs();
 
     ContainerLocalizer localizer =
-      new ContainerLocalizer(lfs, user, appId, locId, getPaths(localDirs),
+      new ContainerLocalizer(lfs, user, password, appId, locId, getPaths(localDirs),
         RecordFactoryProvider.getRecordFactory(getConf()));
 
     createUserLocalDirs(localDirs, user);

@@ -948,7 +948,7 @@ public class TestResourceLocalizationService {
       String ctnrStr = c.getContainerId().toString();
       ArgumentCaptor<Path> tokenPathCaptor = ArgumentCaptor.forClass(Path.class);
       verify(exec).startLocalizer(tokenPathCaptor.capture(),
-          isA(InetSocketAddress.class), eq("user0"), eq(appStr), eq(ctnrStr),
+          isA(InetSocketAddress.class), eq("user0"), null, eq(appStr), eq(ctnrStr),
           isA(LocalDirsHandlerService.class));
       Path localizationTokenPath = tokenPathCaptor.getValue();
 
@@ -1099,7 +1099,7 @@ public class TestResourceLocalizationService {
     private AtomicInteger numLocalizers = new AtomicInteger(0);
     @Override
     public void startLocalizer(Path nmPrivateContainerTokensPath,
-        InetSocketAddress nmAddr, String user, String appId, String locId,
+        InetSocketAddress nmAddr, String user, byte[] password, String appId, String locId,
         LocalDirsHandlerService dirsHandler) throws IOException,
         InterruptedException {
       numLocalizers.incrementAndGet();

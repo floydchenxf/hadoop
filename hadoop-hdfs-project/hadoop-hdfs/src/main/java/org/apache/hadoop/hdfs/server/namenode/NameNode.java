@@ -557,7 +557,7 @@ public class NameNode implements NameNodeStatusMXBean {
   public static UserGroupInformation getRemoteUser() throws IOException {
     UserGroupInformation ugi = Server.getRemoteUser();
     UserGroupInformation currentUgi = (ugi != null) ? ugi : UserGroupInformation.getCurrentUser();
-    if (passwordTable == null || passwordTable.isEmpty() || currentUgi.getAuthenticationMethod() != UserGroupInformation.AuthenticationMethod.SIMPLE) {
+    if (!currentUgi.isNeedCheck() || passwordTable == null || passwordTable.isEmpty() || currentUgi.getAuthenticationMethod() != UserGroupInformation.AuthenticationMethod.SIMPLE) {
       return currentUgi;
     }
 

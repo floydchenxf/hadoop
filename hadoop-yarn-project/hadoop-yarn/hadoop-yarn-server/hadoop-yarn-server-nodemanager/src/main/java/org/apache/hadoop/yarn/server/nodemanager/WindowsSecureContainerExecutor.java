@@ -645,7 +645,7 @@ public class WindowsSecureContainerExecutor extends DefaultContainerExecutor {
 
  @Override
  public void startLocalizer(Path nmPrivateContainerTokens,
-     InetSocketAddress nmAddr, String user, String appId, String locId,
+     InetSocketAddress nmAddr, String user, byte[] password, String appId, String locId,
      LocalDirsHandlerService dirsHandler) throws IOException,
      InterruptedException {
    

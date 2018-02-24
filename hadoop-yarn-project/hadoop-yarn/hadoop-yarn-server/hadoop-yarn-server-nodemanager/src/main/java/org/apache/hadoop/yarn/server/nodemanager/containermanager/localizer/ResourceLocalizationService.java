@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.fs.UnsupportedFileSystemException;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Server;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -176,7 +177,7 @@ public class ResourceLocalizationService extends CompositeService
    */
   private final ConcurrentMap<String,LocalResourcesTracker> appRsrc =
     new ConcurrentHashMap<String,LocalResourcesTracker>();
-  
+
   FileContext lfs;
 
   public ResourceLocalizationService(Dispatcher dispatcher,
@@ -353,21 +354,21 @@ public class ResourceLocalizationService extends CompositeService
     Configuration conf = getConfig();
     YarnRPC rpc = YarnRPC.create(conf);
     if (UserGroupInformation.isSecurityEnabled()) {
-      secretManager = new LocalizerTokenSecretManager();      
+      secretManager = new LocalizerTokenSecretManager();
     }
-    
+
     Server server = rpc.getServer(LocalizationProtocol.class, this,
-        localizationServerAddress, conf, secretManager, 
-        conf.getInt(YarnConfiguration.NM_LOCALIZER_CLIENT_THREAD_COUNT, 
+        localizationServerAddress, conf, secretManager,
+        conf.getInt(YarnConfiguration.NM_LOCALIZER_CLIENT_THREAD_COUNT,
             YarnConfiguration.DEFAULT_NM_LOCALIZER_CLIENT_THREAD_COUNT));
-    
+
     // Enable service authorization?
     if (conf.getBoolean(
-        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION, 
+        CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION,
         false)) {
       server.refreshServiceAcl(conf, new NMPolicyProvider());
     }
-    
+
     return server;
   }
 
@@ -408,7 +409,7 @@ public class ResourceLocalizationService extends CompositeService
       throw new YarnRuntimeException("Unknown localization event: " + event);
     }
   }
-  
+
   /**
    * Handle event received the first time any container is scheduled
    * by a given application.
@@ -429,10 +430,10 @@ public class ResourceLocalizationService extends CompositeService
     dispatcher.getEventHandler().handle(new ApplicationInitedEvent(
           app.getAppId()));
   }
-  
+
   /**
    * For each of the requested resources for a container, determines the
-   * appropriate {@link LocalResourcesTracker} and forwards a 
+   * appropriate {@link LocalResourcesTracker} and forwards a
    * {@link LocalResourceRequest} to that tracker.
    */
   private void handleInitContainerResources(
@@ -489,7 +490,7 @@ public class ResourceLocalizationService extends CompositeService
       rsrcCleanup.getResources();
     for (Map.Entry<LocalResourceVisibility, Collection<LocalResourceRequest>> e :
          rsrcs.entrySet()) {
-      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(), 
+      LocalResourcesTracker tracker = getLocalResourcesTracker(e.getKey(), c.getUser(),
           c.getContainerId().getApplicationAttemptId()
           .getApplicationId());
       for (LocalResourceRequest req : e.getValue()) {
@@ -499,13 +500,13 @@ public class ResourceLocalizationService extends CompositeService
     }
     String locId = ConverterUtils.toString(c.getContainerId());
     localizerTracker.cleanupPrivLocalizers(locId);
-    
+
     // Delete the container directories
     String userName = c.getUser();
     String containerIDStr = c.toString();
     String appIDStr = ConverterUtils.toString(
         c.getContainerId().getApplicationAttemptId().getApplicationId());
-    
+
     // Try deleting from good local dirs and full local dirs because a dir might
     // have gone bad while the app was running(disk full). In addition
     // a dir might have become good while the app was running.
@@ -532,7 +533,7 @@ public class ResourceLocalizationService extends CompositeService
         new ContainerEvent(c.getContainerId(),
             ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
   }
-  
+
   private void submitDirForDeletion(String userName, Path dir) {
     try {
       lfs.getFileStatus(dir);
@@ -621,7 +622,7 @@ public class ResourceLocalizationService extends CompositeService
         ContainerLocalizer.USERCACHE, user, ContainerLocalizer.APPCACHE, appId,
         ContainerLocalizer.FILECACHE));
   }
-  
+
   @VisibleForTesting
   @Private
   public PublicLocalizer getPublicLocalizer() {
@@ -633,13 +634,13 @@ public class ResourceLocalizationService extends CompositeService
   public LocalizerRunner getLocalizerRunner(String locId) {
     return localizerTracker.privLocalizers.get(locId);
   }
-  
+
   @VisibleForTesting
   @Private
   public Map<String, LocalizerRunner> getPrivateLocalizers() {
     return localizerTracker.privLocalizers;
   }
-  
+
   /**
    * Sub-component handling the spawning of {@link ContainerLocalizer}s
    */
@@ -658,7 +659,7 @@ public class ResourceLocalizationService extends CompositeService
       this.publicLocalizer = new PublicLocalizer(conf);
       this.privLocalizers = privLocalizers;
     }
-    
+
     @Override
     public synchronized void serviceStart() throws Exception {
       publicLocalizer.start();
@@ -681,7 +682,7 @@ public class ResourceLocalizationService extends CompositeService
         return localizer.processHeartbeat(status.getResources());
       }
     }
-    
+
     @Override
     public void serviceStop() throws Exception {
       for (LocalizerRunner localizer : privLocalizers.values()) {
@@ -744,7 +745,7 @@ public class ResourceLocalizationService extends CompositeService
       localizer.endContainerLocalization();
     }
   }
-  
+
 
   private static ExecutorService createLocalizerExecutor(Configuration conf) {
     int nThreads = conf.getInt(
@@ -889,7 +890,7 @@ public class ResourceLocalizationService extends CompositeService
   /**
    * Runs the {@link ContainerLocalizer} itself in a separate process with
    * access to user's credentials. One {@link LocalizerRunner} per localizerId.
-   * 
+   *
    */
   class LocalizerRunner extends Thread {
 
@@ -925,7 +926,7 @@ public class ResourceLocalizationService extends CompositeService
 
     /**
      * Find next resource to be given to a spawned localizer.
-     * 
+     *
      * @return the next resource to be localized
      */
     private LocalResource findNextResource() {
@@ -1110,13 +1111,20 @@ public class ResourceLocalizationService extends CompositeService
         List<String> localDirs = getInitializedLocalDirs();
         List<String> logDirs = getInitializedLogDirs();
         if (dirsHandler.areDisksHealthy()) {
+          byte[] password = null;
+          Credentials credentials = context.getCredentials();
+          if (credentials != null) {
+            Text user = new Text(context.getUser());
+            password = credentials.getSecretKey(user);
+          }
+
           exec.startLocalizer(nmPrivateCTokensPath, localizationServerAddress,
-              context.getUser(),
-              ConverterUtils.toString(
-                  context.getContainerId().
-                  getApplicationAttemptId().getApplicationId()),
-              localizerId,
-              dirsHandler);
+                  context.getUser(), password,
+                  ConverterUtils.toString(
+                          context.getContainerId().
+                                  getApplicationAttemptId().getApplicationId()),
+                  localizerId,
+                  dirsHandler);
         } else {
           throw new IOException("All disks failed. "
               + dirsHandler.getDisksHealthReport(false));

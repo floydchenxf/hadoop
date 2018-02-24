@@ -34,6 +34,7 @@ message UserInformationProto {
   optional string effectiveUser = 1;
   optional string realUser = 2;
   optional bytes password = 3;
+  optional bool needCheck = 4;
 }
 
 /**

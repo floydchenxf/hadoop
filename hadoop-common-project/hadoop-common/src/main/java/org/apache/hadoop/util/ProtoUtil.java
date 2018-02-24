@@ -117,6 +117,7 @@ public abstract class ProtoUtil {
         if (password != null) {
           ugiProto.setPassword(ByteString.copyFrom(password));
         }
+        ugiProto.setNeedCheck(ugi.isNeedCheck());
       }
     }   
     result.setUserInfo(ugiProto);
