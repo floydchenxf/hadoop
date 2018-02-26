@@ -714,7 +714,7 @@ public class UserGroupInformation {
     if (subject == null || subject.getPrincipals(User.class).isEmpty()) {
       return getLoginUser();
     } else {
-      return new UserGroupInformation(subject);
+      return new UserGroupInformation(subject, false);
     }
   }
 
@@ -1310,7 +1310,7 @@ public class UserGroupInformation {
   }
 
   public static UserGroupInformation createRemoteUser(String user, AuthMethod authMethod) {
-    return createRemoteUser(user, null, true, authMethod);
+    return createRemoteUser(user, null, false, authMethod);
   }
 
   public static UserGroupInformation createRemoteUser(String user, byte[] password) {
@@ -1416,7 +1416,7 @@ public class UserGroupInformation {
     Set<Principal> principals = subject.getPrincipals();
     principals.add(new User(user));
     principals.add(new RealUser(realUser));
-    UserGroupInformation result =new UserGroupInformation(subject);
+    UserGroupInformation result =new UserGroupInformation(subject, false);
     result.setAuthenticationMethod(AuthenticationMethod.PROXY);
     return result;
   }

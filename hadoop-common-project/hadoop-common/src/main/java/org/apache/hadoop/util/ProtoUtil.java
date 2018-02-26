@@ -138,19 +138,30 @@ public abstract class ProtoUtil {
     String effectiveUser = userInfo.hasEffectiveUser() ? userInfo
         .getEffectiveUser() : null;
     String realUser = userInfo.hasRealUser() ? userInfo.getRealUser() : null;
+    boolean needCheck = userInfo.getNeedCheck();
     ByteString password = userInfo.hasPassword() ? userInfo.getPassword() : null;
     byte[] passwordBytes = password == null ? null : password.toByteArray();
-    if (effectiveUser != null) {
-      if (realUser != null) {
-        UserGroupInformation realUserUgi = UserGroupInformation
-            .createRemoteUser(realUser, passwordBytes);
-        ugi = UserGroupInformation
-            .createProxyUser(effectiveUser, realUserUgi);
-      } else {
-        ugi = org.apache.hadoop.security.UserGroupInformation
-                .createRemoteUser(effectiveUser, passwordBytes);
-      }
+
+    if (effectiveUser == null) {
+      return ugi;
     }
+
+    if (realUser == null && needCheck) {
+      ugi = org.apache.hadoop.security.UserGroupInformation.createRemoteUser(effectiveUser, passwordBytes);
+    } else if (realUser == null && !needCheck) {
+      ugi = org.apache.hadoop.security.UserGroupInformation.createRemoteUser(effectiveUser);
+    } else if (realUser != null && needCheck) {
+      UserGroupInformation realUserUgi = UserGroupInformation
+              .createRemoteUser(realUser, passwordBytes);
+      ugi = UserGroupInformation
+              .createProxyUser(effectiveUser, realUserUgi);
+    } else {
+      UserGroupInformation realUserUgi = UserGroupInformation
+              .createRemoteUser(realUser);
+      ugi = UserGroupInformation
+              .createProxyUser(effectiveUser, realUserUgi);
+    }
+
     return ugi;
   }
   
